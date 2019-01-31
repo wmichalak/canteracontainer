@@ -4,10 +4,10 @@ This User Guide demonstrates how to set up a Python Cantera development environm
 for myself and anyone else interested. Before I get started, let's review why you would want to use a container environment.
 The reasons to use Cantera inside of a container are, but not limited to:
 1. If you want to build your code on one computer and run it on another.
-2. Avoid installation issues related to different platforms (Windows, Linux, MacOS). 
-3. Avoid maintaining Python distributions across different machines and worrying about conflicts and dependencies. 
-4. Avoid maintaining local code repositories across different machines. 
-5. I have had issues with multiple cantera installations on a single machine and this approach is assured to create a barrier between systems.
+    1. Avoid installation issues related to different platforms (Windows, Linux, MacOS). 
+    2. Avoid maintaining Python distributions across different machines and worrying about conflicts and dependencies. 
+    3. Avoid maintaining local code repositories across different machines. 
+2. I have had issues with multiple cantera installations on a single machine and this approach is assured to create a barrier between systems.
 
 ### Cantera ###
 
@@ -57,7 +57,7 @@ RUN mkdir -p /root/Simulations/Outputs
 ```
 
 With the folder structure in place, we can copy the contents of the local simulation files into the container. Note that 
-the COPY command will only work for in the current local directory. I have tried to also COPY from folders higher in the folder structure, but
+the COPY command will only work in the current local directory. I have tried to also COPY from folders higher in the folder structure, but
 this does not work. I will show another way to copy files later on.
 ```
 COPY . /root/kinetics/
@@ -106,12 +106,12 @@ docker run -it kinetics
 The the `-it` flag tells docker to start the container in the interactive mode and run in a pseudo TTY mode, respectively.
  We will now be at a shell prompt with the conda virtual environment activated inside of the container. 
 (Continue reading __Where is my data?__ before actually running this line.) If you want to just build the container image 
-in order to send it somewhere else, leave the __i__ flag out. 
+in order to send it somewhere else, leave the `-it` flag out. 
 
 ### Run a Cantera Simulation ###
 
 We enter into the container at the working directory, where our code is located. We
-we can enter our typical unix commands: `ls, pwd, cd ...`. However, he container is light and isn't meant to be a full-fledged Linux 
+can enter our typical unix commands: `ls, pwd, cd ...`. However, the container is light and isn't meant to be a full-fledged Linux 
  environment, so we won't be able to edit code, for example. Note the format of the prompt. First is the conda environment, 
 followed by the user name (root) in the container, given by the container tag ID, and then the folder location, separated by a : and completed
 by a #.  We can now run the cantera simulation:
@@ -136,7 +136,8 @@ We can exit the container by typing
 
 ### Where is my data? ###
 
-Containers are ephemeral and stateless by default. We start them up, run our code, shutdown and everything disappears. Unfortunately, this means we also
+Containers are ephemeral and stateless by default. We start them up, run our code, shutdown and everything disappears. This works
+fine if you are running a webserver from a container (see numerous examples coupling Flask and nginx). Unfortunately, this means we also
 lose any created data. The solution to this is to create a __Volume__; a pipeline between the container and the Host machine. 
 In order to do this, we modify the docker run command as:
 
@@ -145,10 +146,10 @@ docker run -it -v <local directory>:/root/Simulations/Outputs kinetics
 ```
 
 This will create a pipeline between the two directories. Anything that you place into the `<local directory>` will be made
-available in the `/root/Simulations/Outputs` directory in the container and vice versa. Others that have used containers 
-before will note that VOLUMES can be defined in the DOCKERFILE. I have not found this to work. Also, you can add the `-d` flag
-, which stands for _detach_, if you want this container to run in the background. We can enter into the container, or attach, 
-as discussed below. However, recognize that once you enter into the container, the only way out (exit) will kill the container. 
+available in the `/root/Simulations/Outputs` directory in the container and vice versa. Also, you can add the `-d` flag
+, which stands for _detach_, if you want this container to run in the background. If the container is started in the detached mode,
+we can enter into the container, or attach, as discussed below. However, recognize that once you enter into the container, 
+the only way out (exit) will kill the container. 
 The volume mechanism is also a reasonable way to introduce another model into a container without having to rebuild. Frankly, we 
 could store all of our models in the Host volume and run them from within the container. 
 
@@ -180,10 +181,13 @@ Or copy a file from the host to the container
 docker cp file.ext <container>:/path/to/file.ext
 ```
 
-### Deploy on a Remote machine ###
+These files will only be present as long as the container is running. Once a container is killed, these files will be lost. 
+I recommend using the Volume or adding the files in the Dockerfile if you want a robust methodology.
 
-I often want to deploy a set of simulations onto a remote server. Without having to rebuild the container all over again, 
-we can just save the image and use secure copy protocol to transfer it.
+### Deploy on a Remote Machine ###
+
+I often want to deploy a set of simulations onto a remote server (really, this is why I am using containers). 
+Without having to rebuild the container all over again, we can just save the image and use secure copy protocol to transfer it.
 
 In the terminal on your local machine save the container image:
 
@@ -198,7 +202,8 @@ $ scp kinetics.tar <user>@<remote server>:/path/to/directory
 ```
 
 The size of this container is about 3 GB despite my intentions to keep the container light; this is due to the Python libraries. 
-Without Python+libraries, the container is around 500 MB. Once the file has transferred, we can ssh into the server.
+Without Python+libraries, the container is around 500 MB. Once the file has transferred, we can ssh into the server. Fortunately, we
+should not need to rebuild or transfer the container often. Using the Volumes also us to run new code without rebuilding.
 
 To load the image we unpack the tar: 
 
