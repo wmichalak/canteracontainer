@@ -81,7 +81,7 @@ few RUN statements as possible serves us with smaller images.
 Now that we have defined the Dockerfile, we can build the Docker image. Navigate to the folder location in Terminal and run:
 
 ```
-docker build -t=cantera .
+$ docker build -t=cantera .
 ```
 
 with the `.` at the end to signal that we are building from the current directory. 
@@ -109,7 +109,7 @@ or a user process). You can see a list of your running containers with the comma
 To run the container we type:
 
 ```
-docker run -it --name kinetics kinetics
+$ docker run -it --name kinetics kinetics
 ```
 
 The the `-it` flag tells docker to start the container in the interactive and pseudo TTY mode, respectively.
@@ -152,14 +152,14 @@ lose any created data. The solution to this is to create a __Volume__; a pipelin
 In order to do this, we modify the docker run command as:
 
 ```
-docker run -it --name kinetics -v <local directory>:/root/Simulations/Outputs kinetics
+$ docker run -it --name kinetics -v <local directory>:/root/Simulations/Outputs kinetics
 ```
 
 This will create a pipeline between the two directories. Anything that you place into the `<local directory>` will be made
 available in the `/root/Simulations/Outputs` directory in the container and vice versa. Also, you can add the `-d` flag
 , which stands for _detach_, if you want this container to run in the background. If the container is started in the detached mode,
-we can enter into the container, or attach, as discussed below. However, recognize that once you enter into the container, 
-the only way out (exit) will kill the container. 
+we can enter into the container, or attach, as discussed below. You can exit by typing `exit`, but this will stop the container. 
+To keep the container up, type `ctrl+p,ctrl+q`.
 
 The volume mechanism is also a reasonable way to introduce another model into a container without having to rebuild. Frankly, we 
 could store all of our models in the Host volume and run them from within the container. 
@@ -170,22 +170,22 @@ When you `exit` out of the container, the container image still exists and we do
 the container again we need to identify the container image ID or the name we gave above. We can do this with 
 
 ```
-docker ps -all
+$ docker ps -all
 ```
 
 Fields with Container ID, IMAGE, COMMAND, CREATED, STATUS, PORTS, NAMES will be printed. We can then start, attach, and stop 
 the container with
 
 ```
-docker start <CONTAINER_ID>
-docker attach <CONTAINER_ID>
-docker stop <CONTAINER_ID>
+$ docker start <CONTAINER_ID>
+$ docker attach <CONTAINER_ID>
+$ docker stop <CONTAINER_ID>
 
 or 
 
-docker start <NAME>
-docker attach <NAME>
-docker stop <NAME>
+$ docker start <NAME>
+$ docker attach <NAME>
+$ docker stop <NAME>
 ```
 
 The first line will output all available (active and inactive) containers. Look for the ID associated with _kinetics_ by
@@ -195,9 +195,9 @@ Note the `docker attach`  command - this will enter you into the container at th
 If experimenting, we will  want to clear out the old images, containers and volumes:
 
 ```
-docker system prune --volumes
-docker image prune
-docker image rm <CONTAINER ID>
+$ docker system prune --volumes
+$ docker image prune
+$ docker image rm <CONTAINER ID>
 ```
 
 We can also force the container to be removed by adding `-rm` in the `docker run` call. To clean up all containers and images
@@ -214,7 +214,7 @@ If you have booted your container and it is running in the background (with a `-
 and you want to execute a command, you can use the `docker exec` command:
 
 ```
-docker container exec <CONTAINER ID> python cantera_PBR.py
+$ docker container exec <CONTAINER ID> python cantera_PBR.py
 ```
 
 Note how we use spaces between the commands.
@@ -226,7 +226,7 @@ We can also spin up the container and define what to run first by adding the com
 on the end of the statement. This is defining the entrypoint.
 
 ```
-docker run -d --name cantera -v <local directory>:/root/Simulations/Outputs kinetics python cantera_PBR.py
+$ docker run -d --name cantera -v <local directory>:/root/Simulations/Outputs kinetics python cantera_PBR.py
 ```
 
 ### Copying files between Host and Container ###
@@ -234,28 +234,27 @@ docker run -d --name cantera -v <local directory>:/root/Simulations/Outputs kine
 We can copy files from container to host by
 
 ```
-$ docker cp <container>:/path/to/file.ext .
+$$ docker cp <container>:/path/to/file.ext .
 ```
 
 Or copy a file from the host to the container
 
 ```
-$ docker cp file.ext <container>:/path/to/file.ext
+$$ docker cp file.ext <container>:/path/to/file.ext
 ```
 
 These files will only be present as long as the container is running. Once a container is killed, these files will be lost. 
 In order to save the files added to the container, we need to commit and save the container to the image.
 
-### Docker Commit and Save ###
+### Docker Commit  ###
+
+To commit the changes type:
 
 ```
-$ docker commit <CONTAINER_ID> -m commit message
-
-or 
-
-$ docker commit <CONTAINER_NAME>
+$ docker commit <CONTAINER_NAME> kinetics
 ```
 
+We can also choose to make a new container on the commit and call it something other than kinetics.
 
 ### Deploy on a Remote Machine ###
 
@@ -281,7 +280,7 @@ should not need to rebuild or transfer the container often. Using the Volumes al
 To load the image we unpack the tar: 
 
 ```
--$ sudo docker load --input kinetics.tar
+$ sudo docker load --input kinetics.tar
 ```
 
 where I use `sudo` because I am not the root/admin on the server. You may also need to change permissions `$ chmod u+x kinetics`. 
@@ -289,7 +288,7 @@ where I use `sudo` because I am not the root/admin on the server. You may also n
 We are now ready to run the container on the remote machine just as we did before.
 
 ```
-docker run -it -v <local directory>:/root/Simulations/Outputs kinetics
+$ docker run -it -v <local directory>:/root/Simulations/Outputs kinetics
 ```
 
 ### Cantera Container as a Service ###
