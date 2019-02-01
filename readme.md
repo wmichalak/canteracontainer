@@ -1,7 +1,7 @@
 # README #
 
-This User Guide demonstrates how to set up a Python Cantera development environment inside a container. I wrote this as a reminder
-for myself and anyone else interested. Before I get started, let's review why you would want to use a container environment.
+This User Guide demonstrates how to set up a Python Cantera development environment inside a Docker container. I wrote this as a reminder
+for myself and to share with anyone else interested. Before I get started, let's review why you would want to use a container environment.
 The reasons to use Cantera inside of a container are, but not limited to:
 1. If you want to build your code on one computer and run it on another.
     1. Avoid installation issues related to different platforms (Windows, Linux, MacOS). 
@@ -29,7 +29,6 @@ could be filled with many *.py files and simulations. Here, I only include a sin
 `cantera_PBR.py`. You will need two additional files at the root of the folder called 
 `Dockerfile` and `environment.yml`. We will review the use of these files later.
 
-### Building the Cantera Container ###
 
 #### Create a Dockerfile ####
 
@@ -43,17 +42,12 @@ FROM continuumio/miniconda3
 ```
 
 Next, we need to define the folder structure in the container. I use a folder called kinetics to house the Cantera code
-and set this as my working directory.
+and set this as my working directory. We also need a folder to hold the simulation outputs.
 
 ```
-RUN mkdir -p /root/kinetics/
+RUN mkdir -p /root/kinetics/ && \
+    mkdir -p /root/Simulations/Outputs
 WORKDIR /root/kinetics/
-```
-
-We need a folder to hold the simulation outputs:
-
-```
-RUN mkdir -p /root/Simulations/Outputs
 ```
 
 With the folder structure in place, we can copy the contents of the local simulation files into the container. Note that 
@@ -68,51 +62,67 @@ an `environment.yml` file to define the packages. I also follow best practices a
 `kineticsenv`.  Finally, I activate `kineticsenv', so that when we enter into the container, we are ready to go!
 
 ```
+# Install conda environment
 ADD environment.yml /tmp/environment.yml
-RUN conda env create -f environment.yml
-RUN echo "source activate kineticsenv" > ~/.bashrc
+RUN conda env create -f environment.yml && \
+    conda clean --all && \
+    echo "source activate kineticsenv" > ~/.bashrc
 ENV PATH /opt/conda/envs/kineticsenv/bin:$PATH
 ```
 
 Note that the environment name is defined in the `enviroment.yml` file. 
 
-### Build the Container ###
+Another useful and non-obvious point is how I constructed the RUN statements. Docker takes each command in the Dockerfile
+and builds a layer for that command. More commands equals more layers equals bigger image. Place the commands under as 
+few RUN statements as possible serves us with smaller images.
 
-First, we build the Docker container. Navigate to the folder location in Terminal and run:
+### Build the Docker Image ###
+
+Now that we have defined the Dockerfile, we can build the Docker image. Navigate to the folder location in Terminal and run:
 
 ```
-docker build -t=kinetics .
+docker build -t=cantera .
 ```
 
-Docker will search for a file called Dockerfile and run it. I use the `-t=kinetics` flag to tag the Docker image, so that we can 
-refer to it as _kinetics_ later on. This will take a few minutes to download Alpine,
+with the `.` at the end to signal that we are building from the current directory. 
+
+Docker will search for a file called Dockerfile and run it. I use the `-t=cantera` flag to tag the Docker image, so that we can 
+refer to it as _cantera_ later on. This will take a few minutes to download Alpine,
  miniconda, and all of the python packages. This one command will create the 
 Container, which we will be able to run shortly. 
 
-Let's take stock of the situation. We have built a container based in Linux
+Let's take stock of the situation. We have built an image based in Linux
 that has Python and all of the dependencies required to run Cantera as well as other data science, engineering, modeling 
 libraries we may need (Pandas, Scipy, and Matplotlib). And, we can send this 
-container to any machine we desire and it will work. We never have to reinstall Python or Cantera again! If we have 
-new code or a modified simulation, we can just copy it into the container (or rebuild) and run it.
+image to any machine we desire and it will work. We never have to reinstall Python or Cantera again! If we have 
+new code or a modified simulation, we can just copy it into a container deployed from the image (or rebuild image) and run it.
+
+Let's pause once more to clarify the difference between and image and container. A container is launched by running an image. 
+An image is an executable package that includes everything needed to run an application–the code, a runtime, libraries, 
+environment variables, and configuration files.
+A container is a runtime instance of an image–what the image becomes in memory when executed (that is, an image with state, 
+or a user process). You can see a list of your running containers with the command, docker ps, just as you would in Linux. 
+— from [Docker Concepts](https://docs.docker.com/get-started/#docker-concepts)
 
 ### Run the Cantera Container ###
 
 To run the container we type:
 
 ```
-docker run -it kinetics
+docker run -it --name kinetics kinetics
 ```
 
-The the `-it` flag tells docker to start the container in the interactive mode and run in a pseudo TTY mode, respectively.
+The the `-it` flag tells docker to start the container in the interactive and pseudo TTY mode, respectively.
  We will now be at a shell prompt with the conda virtual environment activated inside of the container. 
-(Continue reading __Where is my data?__ before actually running this line.) If you want to just build the container image 
-in order to send it somewhere else, leave the `-it` flag out. 
+(Continue reading __Where is my data?__ before actually running this line.) The `--name kinetics` flag defines the name of the running
+container. The second `kinetics` is the name of the image. If the `--name` is not defined, Docker will assign a name. In this case
+I usually refer to the container by the Container ID.
 
 ### Run a Cantera Simulation ###
 
-We enter into the container at the working directory, where our code is located. We
-can enter our typical unix commands: `ls, pwd, cd ...`. However, the container is light and isn't meant to be a full-fledged Linux 
- environment, so we won't be able to edit code, for example. Note the format of the prompt. First is the conda environment, 
+In interactive mode, we enter into the container at the working directory, where our code is located. We
+can enter our typical unix commands: `ls, pwd, cd ...`. Note, that the container is light and isn't meant to be a full-fledged Linux 
+ environment, so we won't be able to edit code, for example. Also note, the format of the prompt. First is the conda environment name, 
 followed by the user name (root) in the container, given by the container tag ID, and then the folder location, separated by a : and completed
 by a #.  We can now run the cantera simulation:
 
@@ -120,7 +130,7 @@ by a #.  We can now run the cantera simulation:
 (kineticsenv) root@<tag>:~/kinetics# python cantera_PBR.py 
 ```
 
-Viola! We were able to run our Cantera simulation in the kinetics Container! We can check if the simulation completed successfully
+Viola! We were able to run our Cantera simulation in the kinetics container! We can check if the simulation completed successfully
 by navigating to our Simulations/Outputs directing and looking for our output file.
 
 ```
@@ -142,7 +152,7 @@ lose any created data. The solution to this is to create a __Volume__; a pipelin
 In order to do this, we modify the docker run command as:
 
 ```
-docker run -it -v <local directory>:/root/Simulations/Outputs kinetics
+docker run -it --name kinetics -v <local directory>:/root/Simulations/Outputs kinetics
 ```
 
 This will create a pipeline between the two directories. Anything that you place into the `<local directory>` will be made
@@ -150,39 +160,102 @@ available in the `/root/Simulations/Outputs` directory in the container and vice
 , which stands for _detach_, if you want this container to run in the background. If the container is started in the detached mode,
 we can enter into the container, or attach, as discussed below. However, recognize that once you enter into the container, 
 the only way out (exit) will kill the container. 
+
 The volume mechanism is also a reasonable way to introduce another model into a container without having to rebuild. Frankly, we 
 could store all of our models in the Host volume and run them from within the container. 
 
-### Start, attach, and stop ###
+### Start, attach, stop ###
 
 When you `exit` out of the container, the container image still exists and we do not need to rebuild it. In order to start up
-the container again we need to identify the container image ID. We can do this with 
+the container again we need to identify the container image ID or the name we gave above. We can do this with 
 
 ```
 docker ps -all
-docker start <CONTAINER_ID>
-docker attach <CONTAINER_ID>
 ```
 
-The first line will output all available (active and inactive) containers. Look for the ID associated with _kinetics_. 
-Note the `docker attach`  command - this will bring you back into the container shell prompt.
+Fields with Container ID, IMAGE, COMMAND, CREATED, STATUS, PORTS, NAMES will be printed. We can then start, attach, and stop 
+the container with
+
+```
+docker start <CONTAINER_ID>
+docker attach <CONTAINER_ID>
+docker stop <CONTAINER_ID>
+
+or 
+
+docker start <NAME>
+docker attach <NAME>
+docker stop <NAME>
+```
+
+The first line will output all available (active and inactive) containers. Look for the ID associated with _kinetics_ by
+typing `docker ps -all`. The <CONTAINER_ID> is the scrambled alphanumeric.
+Note the `docker attach`  command - this will enter you into the container at the shell prompt.
+
+If experimenting, we will  want to clear out the old images, containers and volumes:
+
+```
+docker system prune --volumes
+docker image prune
+docker image rm <CONTAINER ID>
+```
+
+We can also force the container to be removed by adding `-rm` in the `docker run` call. To clean up all containers and images
+on the system, you can type `docker rmi $(docker images -q)`
+
+### Spinning up and executing in the background ###
+
+Starting this container in the background is not particularly useful because there are no commands that will be run. There are 
+two mechanisms to start the container in the background and execute a simulation.
+
+#### Executing commands (EXEC) onto a running container ####
+
+If you have booted your container and it is running in the background (with a `-d` flag or if you used `docker start`)
+and you want to execute a command, you can use the `docker exec` command:
+
+```
+docker container exec <CONTAINER ID> python cantera_PBR.py
+```
+
+Note how we use spaces between the commands.
+
+
+#### Using an ENTRYPOINT ####
+
+We can also spin up the container and define what to run first by adding the commands we want to run
+on the end of the statement. This is defining the entrypoint.
+
+```
+docker run -d --name cantera -v <local directory>:/root/Simulations/Outputs kinetics python cantera_PBR.py
+```
 
 ### Copying files between Host and Container ###
 
 We can copy files from container to host by
 
 ```
-docker cp <container>:/path/to/file.ext .
+$ docker cp <container>:/path/to/file.ext .
 ```
 
 Or copy a file from the host to the container
 
 ```
-docker cp file.ext <container>:/path/to/file.ext
+$ docker cp file.ext <container>:/path/to/file.ext
 ```
 
 These files will only be present as long as the container is running. Once a container is killed, these files will be lost. 
-I recommend using the Volume or adding the files in the Dockerfile if you want a robust methodology.
+In order to save the files added to the container, we need to commit and save the container to the image.
+
+### Docker Commit and Save ###
+
+```
+$ docker commit <CONTAINER_ID> -m commit message
+
+or 
+
+$ docker commit <CONTAINER_NAME>
+```
+
 
 ### Deploy on a Remote Machine ###
 
