@@ -25,8 +25,11 @@ on each machine that will run the container.
 ### Folder Structure ###
 
 The root folder of the repository contains only a few files in order to demonstrate the implementation. Of course, the folder
-could be filled with many *.py files and simulations. Here, I only include a single file that simulates a Packed Bed Reactor called 
-`cantera_PBR.py`. You will need two additional files at the root of the folder called 
+could be filled with many *.py files and simulations. Here, I only include a two examples: catalytic_combustion.py and multiprocessing_viscosity.py.
+ The former is an exact copy from the Cantera repo; the latter has some modifications to demonstrate how the parallelism improves
+ with the number of calculations. 
+ 
+ You will need two additional files at the root of the folder called 
 `Dockerfile` and `environment.yml`. We will review the use of these files later.
 
 
@@ -70,9 +73,9 @@ RUN conda env create -f environment.yml && \
 ENV PATH /opt/conda/envs/kineticsenv/bin:$PATH
 ```
 
-Note that the environment name is defined in the `enviroment.yml` file. 
+Note that the environment name, kineticsenv, is defined in the `enviroment.yml` file. 
 
-Another useful and non-obvious point is how I constructed the RUN statements. Docker takes each command in the Dockerfile
+Another useful and non-obvious aspect is how I constructed the RUN statements. Docker takes each command in the Dockerfile
 and builds a layer for that command. More commands equals more layers equals bigger image. Place the commands under as 
 few RUN statements as possible serves us with smaller images.
 
@@ -97,7 +100,7 @@ libraries we may need (Pandas, Scipy, and Matplotlib). And, we can send this
 image to any machine we desire and it will work. We never have to reinstall Python or Cantera again! If we have 
 new code or a modified simulation, we can just copy it into a container deployed from the image (or rebuild image) and run it.
 
-Let's pause once more to clarify the difference between and image and container. A container is launched by running an image. 
+Let's also review the difference between an image and container. A container is launched by running an image. 
 An image is an executable package that includes everything needed to run an application–the code, a runtime, libraries, 
 environment variables, and configuration files.
 A container is a runtime instance of an image–what the image becomes in memory when executed (that is, an image with state, 
@@ -121,9 +124,9 @@ I usually refer to the container by the Container ID.
 ### Run a Cantera Simulation ###
 
 In interactive mode, we enter into the container at the working directory, where our code is located. We
-can enter our typical unix commands: `ls, pwd, cd ...`. Note, that the container is light and isn't meant to be a full-fledged Linux 
+can enter our typical unix commands: `ls, pwd, cd ...` at this time. Note, that the container is light and isn't meant to be a full-fledged Linux 
  environment, so we won't be able to edit code, for example. Also note, the format of the prompt. First is the conda environment name, 
-followed by the user name (root) in the container, given by the container tag ID, and then the folder location, separated by a : and completed
+followed by the user name (root), the container tag ID, and then the folder location, separated by a : and completed
 by a #.  We can now run the cantera simulation:
 
 ```
@@ -144,37 +147,26 @@ We can exit the container by typing
 (kineticsenv) root@<tag>:~/Simulations/Outputs# exit
 ```
 
-### Where is my data? ###
+If you want to leave the container running you type `ctrl+p,ctrl+q`. Otherwise, exiting will kill the container.
 
-Containers are ephemeral and stateless by default. We start them up, run our code, shutdown and everything disappears. This works
-fine if you are running a webserver from a container (see numerous examples coupling Flask and nginx). Unfortunately, this means we also
-lose any created data. The solution to this is to create a __Volume__; a pipeline between the container and the Host machine. 
-In order to do this, we modify the docker run command as:
+### Run, Start, Attach, and Stop ###
 
-```
-$ docker run -it --name kinetics -v <local directory>:/root/Simulations/Outputs kinetics
-```
+When you use the `docker run` command, you are instantiating a container and starting it up in one command. As shown before, 
+you can use the `-it` command to enter into interactive shell. Without the `it` flags, the container will start and run until all commands are completed. 
+In our case, we haven't defined any commands to run on startup, so this container will automatically exit.  In my case, I usually will 
+enter in the interactive mode and this won't be a problem. For the sake of documentation, it is also worth noting that you 
+can start a docker container to run in background using the `-d` flag,, which stands for _detach_,
+If the container is started in the detached mode and is running, we can enter into the container, or attach, as discussed below. 
+We also can reattach if the container is running after the `ctrl+p,ctrl+q` commands. 
 
-This will create a pipeline between the two directories. Anything that you place into the `<local directory>` will be made
-available in the `/root/Simulations/Outputs` directory in the container and vice versa. Also, you can add the `-d` flag
-, which stands for _detach_, if you want this container to run in the background. If the container is started in the detached mode,
-we can enter into the container, or attach, as discussed below. You can exit by typing `exit`, but this will stop the container. 
-To keep the container up, type `ctrl+p,ctrl+q`.
-
-The volume mechanism is also a reasonable way to introduce another model into a container without having to rebuild. Frankly, we 
-could store all of our models in the Host volume and run them from within the container. 
-
-### Start, attach, stop ###
-
-When you `exit` out of the container, the container image still exists and we do not need to rebuild it. In order to start up
-the container again we need to identify the container image ID or the name we gave above. We can do this with 
+To start, or attach into a container, we usually need to identify that it is running and the ID using:
 
 ```
 $ docker ps -all
 ```
 
-Fields with Container ID, IMAGE, COMMAND, CREATED, STATUS, PORTS, NAMES will be printed. We can then start, attach, and stop 
-the container with
+Fields are shown with Container ID, IMAGE, COMMAND, CREATED, STATUS, PORTS, NAMES will be printed. This will show you
+ all available (active and inactive) containers. We can then start, attach, and stop the container with the commands
 
 ```
 $ docker start <CONTAINER_ID>
@@ -188,11 +180,8 @@ $ docker attach <NAME>
 $ docker stop <NAME>
 ```
 
-The first line will output all available (active and inactive) containers. Look for the ID associated with _kinetics_ by
-typing `docker ps -all`. The <CONTAINER_ID> is the scrambled alphanumeric.
-Note the `docker attach`  command - this will enter you into the container at the shell prompt.
-
-If experimenting, we will  want to clear out the old images, containers and volumes:
+### Cleaning up containers ###
+As we experiment, we will  want to clear out the old images, containers and volumes:
 
 ```
 $ docker system prune --volumes
@@ -202,6 +191,23 @@ $ docker image rm <CONTAINER ID>
 
 We can also force the container to be removed by adding `-rm` in the `docker run` call. To clean up all containers and images
 on the system, you can type `docker rmi $(docker images -q)`
+
+### Where is my data? ###
+
+Containers are ephemeral and stateless by default. We start them up, run our code, shutdown and everything disappears. This works
+fine if you are running a webserver from a container (see numerous examples coupling Flask and nginx). Unfortunately, this means we also
+lose any created data. The solution to this is to create a __Volume__; a pipeline between the container and the Host machine. 
+In order to do this, we modify the docker run command as:
+
+```
+$ docker run -it --name kinetics -v <local directory>:/root/Simulations/Outputs kinetics
+```
+
+This will create a pipeline between the two directories. Anything that you place into the `<local directory>` will be made
+available in the `/root/Simulations/Outputs` directory in the container and vice versa. 
+
+The volume mechanism is also a reasonable way to introduce another model into a container without having to rebuild. Frankly, we 
+could store all of our models in the Host volume and run them from within the container. 
 
 ### Spinning up and executing in the background ###
 
@@ -291,12 +297,7 @@ We are now ready to run the container on the remote machine just as we did befor
 $ docker run -it -v <local directory>:/root/Simulations/Outputs kinetics
 ```
 
-### Cantera Container as a Service ###
-
-
-
-
-If you experience difficulties or think that I should add something, please let me know at wmichalak@gmail.com.
+If you experience difficulties or you have suggestions, please reach out to wmichalak@gmail.com.
 
 ### References ###
 

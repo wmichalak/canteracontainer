@@ -18,5 +18,3 @@ RUN conda env create -f environment.yml && \
     conda clean --all && \
     echo "source activate kineticsenv" > ~/.bashrc
 ENV PATH /opt/conda/envs/kineticsenv/bin:$PATH
-
-
