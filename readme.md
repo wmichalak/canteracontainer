@@ -273,7 +273,7 @@ In the terminal on your local machine save the container image:
 $ docker save --output kinetics.tar kinetics
 ```
 
-Transfer image files over to a server using SCP commands:
+Transfer image files to a server using SCP commands:
 
 ```
 $ scp kinetics.tar <user>@<remote server>:/path/to/directory
@@ -297,7 +297,7 @@ We are now ready to run the container on the remote machine just as we did befor
 $ docker run -it -v <local directory>:/root/Simulations/Outputs kinetics
 ```
 
-If you experience difficulties or you have suggestions, please reach out to wmichalak@gmail.com.
+If you have suggestions or experience difficulties, please reach out to wmichalak@gmail.com.
 
 ### References ###
 

@@ -14,7 +14,8 @@ COPY . /root/kinetics/
 
 # Install conda environment
 ADD environment.yml /tmp/environment.yml
-RUN conda env create -f environment.yml && \
+RUN conda update -n base -c defaults conda && \
+    conda env create -f environment.yml && \
     conda clean --all && \
     echo "source activate kineticsenv" > ~/.bashrc
 ENV PATH /opt/conda/envs/kineticsenv/bin:$PATH
