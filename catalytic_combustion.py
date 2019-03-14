@@ -13,6 +13,7 @@ Symp. (Intl.) on Combustion,1996 pp. 1747-1754
 
 import numpy as np
 import cantera as ct
+import os
 
 #  Parameter values are collected here to make it easier to modify them
 p = ct.one_atm  # pressure
@@ -115,6 +116,6 @@ sim.save("catcomb.xml", "soln1")
 
 # save selected solution components in a CSV file for plotting in
 # Excel or MATLAB.
-sim.write_csv('catalytic_combustion.csv', quiet=False)
+sim.write_csv(os.path.expanduser('~/Simulations/catalytic_combustion.csv'), quiet=False)
 
 sim.show_stats(0)

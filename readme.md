@@ -130,7 +130,7 @@ followed by the user name (root), the container tag ID, and then the folder loca
 by a #.  We can now run the cantera simulation:
 
 ```
-(kineticsenv) root@<tag>:~/kinetics# python cantera_PBR.py 
+(kineticsenv) root@<tag>:~/kinetics# python catalytic_combustion.py 
 ```
 
 Viola! We were able to run our Cantera simulation in the kinetics container! We can check if the simulation completed successfully
