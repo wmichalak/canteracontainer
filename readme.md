@@ -33,7 +33,7 @@ could be filled with many *.py files and simulations. Here, I only include a two
 `Dockerfile` and `environment.yml`. We will review the use of these files later.
 
 
-#### Create a Dockerfile ####
+### Create a Dockerfile ###
 
 The Dockerfile contains the recipe for building the container. First, we need to define the Linux distro for the container. 
 I use the lightweight Alpine distribution with python 3.6. I also import miniconda3 to manage the Python packages.
