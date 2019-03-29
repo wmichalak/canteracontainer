@@ -112,7 +112,7 @@ or a user process). You can see a list of your running containers with the comma
 To run the container we type:
 
 ```
-$ docker run -it --name kinetics kinetics
+$ docker run -it --name kinetics cantera
 ```
 
 The the `-it` flag tells docker to start the container in the interactive and pseudo TTY mode, respectively.
